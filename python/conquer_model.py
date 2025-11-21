@@ -18,23 +18,25 @@ from loss import QuantileLoss
 
 '''Choose kernel from ['gaussian','uniform','triangular','epanechnikov']'''
 class ConquerNetwork:
-    def __init__(self, quantiles, kernel='gaussian', bandwidth=0.05, shape=(5,70)):
+    def __init__(self, quantiles, kernel='gaussian', bandwidth=0.05, shape=(5,70),residual=False):
         self.quantiles = quantiles
         self.label = 'Conquer Network'
         self.filename = 'nn'
         self.kernel = kernel
         self.bandwidth = bandwidth
         self.shape = shape
+        self.residual = residual
         self.label += f'_{self.shape}'
         self.label += f'_(h={self.bandwidth})'
         self.label += f'_(q={self.quantiles})'
+        self.label += '_res' if residual else '_nores'
 
             
     def fit(self, X, y, manual_grad=False, stop = False):
         self.model, train_losses, val_losses = fit_quantiles(
             X, y, quantiles=self.quantiles, kernel=self.kernel, 
             bandwidth=self.bandwidth, shape=self.shape,
-            manual_grad=manual_grad, stop = stop
+            manual_grad=manual_grad, stop = stop, residual = self.residual
             )
         return train_losses, val_losses
 
@@ -46,7 +48,7 @@ def fit_quantiles(X, y, quantiles=0.5, kernel='gaussian',bandwidth=0.05,
                   nepochs=100, val_pct=0.1, batch_size=None, target_batch_pct=0.01,
                   min_batch_size=20, max_batch_size=100, verbose=False, lr=1e-1, 
                   weight_decay=0.0, patience=5, init_model=None, splits=None, 
-                  file_checkpoints=True, clip_gradients=False, **kwargs):
+                  file_checkpoints=True, clip_gradients=False, residual=False, **kwargs):
 
     file_path = f"data/LOG_{shape}_{kernel}_h{bandwidth}_q{quantiles}"
     
@@ -82,7 +84,7 @@ def fit_quantiles(X, y, quantiles=0.5, kernel='gaussian',bandwidth=0.05,
     tquantiles = autograd.Variable(torch.FloatTensor(quantiles), requires_grad=False)
 
     # Initialize the model
-    model = QuantileNetworkModule(Xmean, Xstd, ymean, ystd, quantiles.shape[0], shape = shape) if init_model is None else init_model
+    model = QuantileNetworkModule(Xmean, Xstd, ymean, ystd, quantiles.shape[0], shape, residual) if init_model is None else init_model
 
     # Save the model to file
     if file_checkpoints:
@@ -158,7 +160,7 @@ def fit_quantiles(X, y, quantiles=0.5, kernel='gaussian',bandwidth=0.05,
                 yhat = model(tX[tidx])
                 if manual_grad:
                     loss, grad_z = lossfn(yhat, tY[tidx,None], requires_grad=manual_grad)
-                    grad_yhat = -grad_z / len(tidx)
+                    grad_yhat = -grad_z / (len(tidx) * yhat.shape[1])
                     yhat.backward(grad_yhat)
                     return loss
                 else:

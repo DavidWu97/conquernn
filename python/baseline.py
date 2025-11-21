@@ -11,10 +11,34 @@ import torch.optim as optim
 from utils import create_folds, batches
 from torch_utils import clip_gradient, logsumexp
 
-
+'''Residual block for residual-based network'''
+class ResidualBlock(nn.Module):
+    def __init__(self, input_size, output_size):
+        super(ResidualBlock, self).__init__()
+        self.linear = nn.Linear(input_size, output_size)
+        self.dropout = nn.Dropout(0.1)
+        self.batchnorm = nn.BatchNorm1d(output_size)
+        self.relu = nn.ReLU()
+        if input_size != output_size:
+            self.shortcut = nn.Sequential(
+                nn.Linear(input_size, output_size),
+                nn.BatchNorm1d(output_size)
+            )
+        else:
+            self.shortcut = nn.Identity()
+        
+    def forward(self, x):
+        identity = self.shortcut(x)
+        out = self.linear(x)
+        out = self.dropout(out)
+        out = self.batchnorm(out)
+        out += identity
+        out = self.relu(out)
+        return out
+    
 '''Neural network to map from X to quantile(s) of y.'''
 class QuantileNetworkModule(nn.Module):
-    def __init__(self, X_means, X_stds, y_mean, y_std, n_out, shape):
+    def __init__(self, X_means, X_stds, y_mean, y_std, n_out, shape, residual = False):
 
         # shape = (L,U), L = number of hidden layers, U = number of nodes in each layer
 
@@ -26,17 +50,24 @@ class QuantileNetworkModule(nn.Module):
         self.n_in = X_means.shape[1]
         self.n_out = n_out
         self.shape = shape
+        self.residual = residual
 
         self.layers = []
-        self.layers.append(nn.Linear(self.n_in, shape[1]))
-        self.layers.append(nn.Dropout(0.1))
-        self.layers.append(nn.ReLU())
-        self.layers.append(nn.BatchNorm1d(shape[1]))
-        for i in range(shape[0]-1):
-            self.layers.append(nn.Linear(shape[1], shape[1]))
+        if self.residual:
+            self.layers.append(ResidualBlock(self.n_in, shape[1]))
+        else:
+            self.layers.append(nn.Linear(self.n_in, shape[1]))
             self.layers.append(nn.Dropout(0.1))
             self.layers.append(nn.ReLU())
             self.layers.append(nn.BatchNorm1d(shape[1]))
+        for i in range(shape[0]-1):
+            if self.residual:
+                self.layers.append(ResidualBlock(shape[1], shape[1]))
+            else:
+                self.layers.append(nn.Linear(shape[1], shape[1]))
+                self.layers.append(nn.Dropout(0.1))
+                self.layers.append(nn.ReLU())
+                self.layers.append(nn.BatchNorm1d(shape[1]))
         self.layers.append(nn.Linear(shape[1], self.n_out if len(self.y_mean.shape) == 1 else self.n_out * self.y_mean.shape[1]))
 
         self.fc_in = nn.Sequential(*self.layers)
@@ -65,7 +96,7 @@ class QuantileNetworkModule(nn.Module):
         return fout.data.numpy() * self.y_std[...,None] + self.y_mean[...,None]
 
 class QuantileNetwork:
-    def __init__(self, quantiles, loss='marginal', shape=(5,70)):
+    def __init__(self, quantiles, loss='marginal', shape=(5,70), residual = False):
         self.quantiles = quantiles
         self.label = 'Quantile Network'
         self.filename = 'nn'
@@ -73,10 +104,13 @@ class QuantileNetwork:
         if self.lossfn != 'marginal':
             self.label += f' ({self.lossfn})'
         self.shape = shape
+        self.residual = residual
         self.label += f' {self.shape}'
+        self.label += ' res' if residual else ' nores'
 
     def fit(self, X, y):
-        self.model, train_losses, val_losses = fit_quantiles(X, y, quantiles=self.quantiles, lossfn=self.lossfn, shape = self.shape)
+        self.model, train_losses, val_losses = fit_quantiles(X, y, quantiles=self.quantiles, lossfn=self.lossfn, 
+                                                             shape = self.shape, residual = self.residual)
         return train_losses, val_losses
 
     def predict(self, X):
@@ -88,7 +122,7 @@ def fit_quantiles(X, y, quantiles=0.5, lossfn = 'marginal',
                     min_batch_size=20, max_batch_size=100,
                     verbose=False, lr=1e-1, weight_decay=0.0, patience=5,
                     init_model=None, splits=None, file_checkpoints=True,
-                    clip_gradients=False, **kwargs):
+                    clip_gradients=False, residual = False, **kwargs):
     if file_checkpoints:
         import uuid
         tmp_file = '/tmp/tmp_file_' + str(uuid.uuid4())
@@ -123,7 +157,7 @@ def fit_quantiles(X, y, quantiles=0.5, lossfn = 'marginal',
     tquantiles = autograd.Variable(torch.FloatTensor(quantiles), requires_grad=False)
 
     # Initialize the model
-    model = QuantileNetworkModule(Xmean, Xstd, ymean, ystd, quantiles.shape[0], shape = shape) if init_model is None else init_model
+    model = QuantileNetworkModule(Xmean, Xstd, ymean, ystd, quantiles.shape[0], shape, residual) if init_model is None else init_model
 
     # Save the model to file
     if file_checkpoints:

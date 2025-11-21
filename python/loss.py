@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 import numpy as np
 from scipy.stats import norm
 
@@ -141,3 +142,47 @@ class QuantileLoss:
         if requires_grad:
             return out1.mean(), out2
         return out1.mean()
+    
+'''Pinball loss with single quantile level'''
+class PinballLoss(nn.Module):
+    def __init__(self, quantile=0.5, reduction='mean'):
+        super(PinballLoss, self).__init__()
+        self.quantile = quantile
+        self.reduction = reduction
+        
+    def forward(self, y_pred, y_true):
+        errors = y_true - y_pred
+        loss = torch.max(self.quantile * errors, (self.quantile - 1) * errors)
+        
+        if self.reduction == 'mean':
+            return torch.mean(loss)
+        elif self.reduction == 'sum':
+            return torch.sum(loss)
+        else:
+            return loss
+
+'''Pinball loss with multiple quantile levels'''
+class MultiQuantilePinballLoss(nn.Module):
+    def __init__(self, quantiles=[0.05, 0.5, 0.95], reduction='mean'):
+        super(MultiQuantilePinballLoss, self).__init__()
+        self.quantiles = torch.tensor(quantiles)
+        self.reduction = reduction
+        
+    def forward(self, y_pred, y_true):
+        # y_pred shape: (batch_size, num_quantiles)
+        # y_true shape: (batch_size,)
+        
+        y_true = y_true.unsqueeze(-1)  # (batch_size, 1)
+        errors = y_true - y_pred  # (batch_size, num_quantiles)
+        
+        losses = torch.max(
+            self.quantiles.to(errors.device) * errors,
+            (self.quantiles.to(errors.device) - 1) * errors
+        )
+        
+        if self.reduction == 'mean':
+            return torch.mean(losses)
+        elif self.reduction == 'sum':
+            return torch.sum(losses)
+        else:
+            return losses
