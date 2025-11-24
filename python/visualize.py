@@ -177,6 +177,80 @@ def time_plot(data):
         plt.savefig(f'plots/time_tau={q}.png', dpi=300, bbox_inches='tight')
         #plt.show()
 
+# Verify Theorem 3.1 & 3.2 by plotting log(MSE) curves with respect to log(n)
+def plot_loss(file_name):
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from matplotlib.ticker import FormatStrFormatter
+    from sklearn.linear_model import LinearRegression
+
+    # .npz file with key "mse_results"
+    # mse_data.shape = (50, 1, 1, 2, 5, 5)
+    # (trial, scenario, bandwidth, kernel, sample size, quantile)
+
+    dat = np.load(file_name)
+    mse_data = dat['mse_results'].mean(axis=0)
+    methods = ['baseline', 'conquer-gauss']
+    sample_sizes = [1000, 3000, 5000, 7000, 10000]
+    quantiles = [0.05, 0.25, 0.5, 0.75, 0.95]
+
+    mse_data = mse_data.squeeze()  # (2, 5, 5)
+
+    # Subplots for different quantile levels
+    # Two curves in each subplot (baseline & conquer)
+    # y: log(MSE), x: log(sample size)
+    fig, axes = plt.subplots(2, 3, figsize=(15, 10))
+    axes = axes.flatten()
+
+    colors = ['blue', 'red']
+    markers = ['o', 's']
+    line_styles = ['-', '--']
+
+    for i, quantile in enumerate(quantiles):
+        ax = axes[i]
+        for method_idx, method in enumerate(methods):
+            mse_values = mse_data[method_idx, :, i]
+            ax.plot(np.log(sample_sizes), np.log(mse_values), 
+                    color=colors[method_idx], marker=markers[method_idx], 
+                    linewidth=2, markersize=6, label=method)
+            
+            # Fit y by x, linear model
+            X = np.array(np.log(sample_sizes)).reshape(-1, 1)
+            y = np.log(mse_values)
+            
+            reg = LinearRegression()
+            reg.fit(X, y)
+            
+            # Plot the fitted line
+            X_fit = np.linspace(min(np.log(sample_sizes)), max(np.log(sample_sizes)), 100).reshape(-1, 1)
+            y_fit = reg.predict(X_fit)
+            ax.plot(X_fit, y_fit, 
+                    color=colors[method_idx], linestyle='--', 
+                    linewidth=1.5, alpha=0.7,
+                    label=f'{method} fit (slope: {reg.coef_[0]:.3f})')
+        
+        ax.set_title(f'Quantile: {quantile}', fontsize=12, fontweight='bold')
+        ax.set_xlabel('Log Sample Size', fontsize=10)
+        ax.set_ylabel('Log MSE', fontsize=10)
+        ax.grid(True, alpha=0.3)
+        ax.legend(fontsize=9)
+        
+        ax.set_xticks(np.log(sample_sizes))
+        ax.set_xticklabels([f'{size:,}' for size in np.log(sample_sizes)], rotation=45)
+        ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+        ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+
+    # Hide the unused subplot
+    for i in range(len(quantiles), len(axes)):
+        axes[i].set_visible(False)
+
+    plt.tight_layout()
+    plt.suptitle('MSE Comparison: Baseline vs Conquer-Gauss Across Quantiles', 
+                fontsize=14, fontweight='bold', y=1.02)
+    plt.savefig('plots/MSE-samplesize-S2-A-reg.png', dpi=300, bbox_inches='tight')
+    #plt.show()
+
+
 def main():
 
     # data shape (trial,scenario,model shape,bandwidth,kernel,samplesize,quantile)
