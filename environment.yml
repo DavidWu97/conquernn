@@ -10,3 +10,5 @@ dependencies:
   - scikit-learn=1.7.2
   - pytorch=2.6.0
   - pip
+  - pip:
+      - quantile-forest==1.4.1

@@ -13,10 +13,13 @@ conquernn/
 ├── jobs/                       # Portable Slurm entry points
 └── python/
     ├── baseline.py             # Nonsmoothed quantile neural network
+    ├── baseline_huber.py       # Huberized quantile neural network
     ├── conquer_model.py        # Convolution-smoothed quantile network
+    ├── tree_baselines.py       # QRF and gradient-boosted tree baselines
     ├── loss.py                 # Smoothed and pinball losses
     ├── scenario.py             # Simulation data-generating processes
     ├── simulation_benchmark.py
+    ├── additional_baselines_benchmark.py
     ├── summarize_simulation.py
     ├── real_data.py
     ├── real_data_benchmark.py
@@ -28,7 +31,7 @@ Generated models, predictions, tables, logs, and experiment outputs are excluded
 
 ## Environment
 
-The experiments use Python 3.10. The pinned environment includes NumPy 1.26.4, pandas 2.2.3, SciPy 1.15.3, scikit-learn 1.7.2, and PyTorch 2.6.0.
+The experiments use Python 3.10. The pinned environment includes NumPy 1.26.4, pandas 2.2.3, SciPy 1.15.3, scikit-learn 1.7.2, PyTorch 2.6.0, and `quantile-forest` 1.4.1.
 
 ### Conda
 
@@ -95,6 +98,22 @@ python simulation_benchmark.py --scenario 1 --shape small --mode joint \
   --output ../outputs/simulation/scenario1_small_joint.npz
 ```
 
+## Additional simulation baselines
+
+Appendix Table 18 adds Quantile Regression Forest (QRF) and a Huberized quantile-loss neural network to the main simulation comparison. The dedicated runner uses the same generated samples, quantile levels, sample sizes, and network shapes as the main simulation:
+
+```bash
+cd python
+python additional_baselines_benchmark.py \
+  --scenario 1 \
+  --shape small \
+  --trials 50 \
+  --workers 48 \
+  --output ../outputs/additional_baselines/scenario1_small.npz
+```
+
+Repeat this command for scenarios 1, 2, and 3 and both network shapes. `jobs/additional_baselines_array.sh` submits all six Huber configurations and runs QRF once per scenario. The Appendix protocol uses 300 QRF trees with `min_samples_split=10`, `min_samples_leaf=5`, and `random_state=0`. The Huber network uses the corresponding Model A or Model B architecture and `huber_delta=0.5`. QRF is architecture-independent, so its output is repeated across the two architecture blocks in the paper.
+
 ## Real-data experiment
 
 The original inputs are included under `python/data/`:
@@ -151,6 +170,7 @@ The Slurm scripts use environment variables for project and Python paths:
 ```bash
 export PROJECT_DIR=/absolute/path/to/conquernn
 sbatch jobs/simulation_array.sh
+sbatch jobs/additional_baselines_array.sh
 sbatch jobs/real_data.sh
 
 export CHECKPOINT_DIR=/absolute/path/to/tabpfn-cache
@@ -165,6 +185,7 @@ Output files are written under `outputs/`, which is ignored by Git.
 
 - Use Python 3.10 and the pinned package versions for the closest numerical reproduction.
 - The simulation runner preserves the data sequence, initialization seed, nonsmoothed training rule, and ConquerNet early-stopping rule used in the paper.
+- Appendix Table 18 combines the main simulation output with the QRF and Huber output from `additional_baselines_benchmark.py`.
 - The paper reports sample standard deviations across 50 repetitions.
 - Runtime values depend on hardware and system load.
 - The TabPFN checkpoint is not tracked by Git. Do not commit access tokens, model caches, or row-level BMI predictions.
