@@ -1,0 +1,2 @@
+-r requirements.txt
+tabpfn==8.5.0
