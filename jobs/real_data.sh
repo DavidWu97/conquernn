@@ -21,4 +21,6 @@ mkdir -p "$PROJECT_DIR/outputs/logs" "$PROJECT_DIR/outputs/real_data"
 cd "$PROJECT_DIR/python"
 "$PYTHON_BIN" -u real_data_benchmark.py \
   --dataset all \
-  --output ../outputs/real_data/neural_results.csv
+  --output ../outputs/real_data/neural_results.csv \
+  --pointwise-output ../outputs/real_data/neural_results_pointwise.csv.gz \
+  --inference-output-dir ../outputs/real_data/table2_inference

@@ -23,6 +23,7 @@ conquernn/
     ├── summarize_simulation.py
     ├── real_data.py
     ├── real_data_benchmark.py
+    ├── real_data_metrics.py       # Table 2 paired-bootstrap inference
     ├── tabpfn_reference.py
     └── data/                   # Original BMI and California Housing inputs
 ```
@@ -127,8 +128,28 @@ The experiments use a fixed 80/20 split with seed 42, network shape `(10, 50)`, 
 cd python
 python real_data_benchmark.py \
   --dataset all \
-  --output ../outputs/real_data/neural_results.csv
+  --output ../outputs/real_data/neural_results.csv \
+  --pointwise-output ../outputs/real_data/neural_results_pointwise.csv.gz \
+  --inference-output-dir ../outputs/real_data/table2_inference
 ```
+
+The runner retains every held-out prediction and pinball loss before computing the Table 2 inference files:
+
+- `neural_results.csv`: neural-network pinball-loss point estimates;
+- `neural_results_pointwise.csv.gz`: long-form held-out targets, predictions, and losses;
+- `table2_inference/table2_pointwise_inference.csv`: ConquerNet-versus-baseline comparisons, reported in the paper as `Nonsmooth loss - ConquerNet loss`, with pointwise 95% basic paired-bootstrap confidence intervals;
+- `table2_inference/table2_pooled_inference.csv`: the BMI and California Housing pooled absolute improvements, confidence intervals, and two-sided p-values;
+- `table2_inference/table2_inference_metadata.json`: estimand, bootstrap unit, repeats, and seeds.
+
+Inference can be recomputed from saved pointwise output without retraining:
+
+```bash
+python real_data_metrics.py \
+  --input ../outputs/real_data/neural_results_pointwise.csv.gz \
+  --output-dir ../outputs/real_data/table2_inference
+```
+
+For every comparison, the bootstrap resamples held-out subjects and keeps the nonsmoothed and ConquerNet losses paired. The BMI pointwise intervals use 20,000 resamples with seeds `20260718` (male) and `20260719` (female); the Housing intervals use 100,000 resamples with seed `20260719`. Each pooled estimand first averages the 15 differences for a subject (five quantiles by three kernels) and then averages subjects. The BMI pooled run uses 100,000 resamples with seed `20260721` and the centered absolute two-sided p-value; Housing uses 100,000 with seed `20260720` and the equal-tail p-value that inverts the basic interval. These intervals quantify finite-test-sample uncertainty conditional on the fitted models and fixed split; they do not include retraining variability.
 
 Training is stochastic and results may vary slightly with library versions and hardware.
 
