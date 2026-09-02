@@ -1,5 +1,5 @@
 .DS_Store
-.venv/
+.venv*/
 __pycache__/
 *.py[cod]
 *.ckpt
@@ -8,6 +8,5 @@ __pycache__/
 *.err
 outputs/
 results/
-models/
 rebuttal_real_data_metrics/
 rebuttal_real_data_metrics.zip

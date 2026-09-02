@@ -23,7 +23,7 @@ fi
 
 mkdir -p "$PROJECT_DIR/outputs/logs" "$PROJECT_DIR/outputs/real_data"
 cd "$PROJECT_DIR/python"
-"$PYTHON_BIN" -u tabpfn_reference.py \
+"$PYTHON_BIN" -u -m real_data.tabpfn \
   --dataset "$DATASET" \
   --checkpoint-dir "$CHECKPOINT_DIR" \
   --device cpu \

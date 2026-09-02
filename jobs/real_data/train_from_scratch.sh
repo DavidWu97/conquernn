@@ -19,7 +19,7 @@ fi
 
 mkdir -p "$PROJECT_DIR/outputs/logs" "$PROJECT_DIR/outputs/real_data"
 cd "$PROJECT_DIR/python"
-"$PYTHON_BIN" -u real_data_benchmark.py \
+"$PYTHON_BIN" -u -m real_data.train \
   --dataset all \
   --output ../outputs/real_data/neural_results.csv \
   --pointwise-output ../outputs/real_data/neural_results_pointwise.csv.gz \

@@ -24,7 +24,7 @@ fi
 
 mkdir -p "$PROJECT_DIR/outputs/logs" "$PROJECT_DIR/outputs/simulation"
 cd "$PROJECT_DIR/python"
-"$PYTHON_BIN" -u simulation_benchmark.py \
+"$PYTHON_BIN" -u -m simulation.main \
   --scenario "$SCENARIO" \
   --shape "$SHAPE" \
   --trials 50 \

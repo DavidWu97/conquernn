@@ -14,7 +14,7 @@ import numpy as np
 import torch
 from baseline import QuantileNetwork
 from conquer_model import ConquerNetwork
-from scenario import Scenario1, Scenario2, Scenario3
+from simulation.scenarios import Scenario1, Scenario2, Scenario3
 from utils import get_idx
 
 METHODS = ("baseline", "gaussian", "uniform", "epanechnikov")

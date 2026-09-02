@@ -10,7 +10,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from real_data import DATASETS, paper_split
+from real_data.datasets import DATASETS, paper_split
 
 QUANTILES = (0.05, 0.25, 0.5, 0.75, 0.95)
 VERSION = "8.5.0"

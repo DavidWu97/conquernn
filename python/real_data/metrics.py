@@ -53,7 +53,10 @@ def parse_args() -> argparse.Namespace:
         "--input",
         type=Path,
         required=True,
-        help="Long-form per-test-point predictions written by real_data_benchmark.py.",
+        help=(
+            "Long-form per-test-point predictions written by real_data.train "
+            "or real_data.bootstrap."
+        ),
     )
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--confidence-level", type=float, default=0.95)

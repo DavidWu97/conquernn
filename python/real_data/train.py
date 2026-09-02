@@ -11,8 +11,8 @@ import pandas as pd
 import torch
 from baseline import QuantileNetwork
 from conquer_model import ConquerNetwork
-from real_data import DATASETS, paper_split
-from real_data_metrics import pointwise_pinball, write_table2_outputs
+from real_data.datasets import DATASETS, paper_split
+from real_data.metrics import pointwise_pinball, write_table2_outputs
 from sklearn.model_selection import KFold
 
 QUANTILES = (0.05, 0.25, 0.5, 0.75, 0.95)

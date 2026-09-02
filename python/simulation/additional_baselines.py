@@ -13,8 +13,8 @@ from pathlib import Path
 import numpy as np
 import torch
 from baseline_huber import HuberQuantileNetwork
-from scenario import Scenario1, Scenario2, Scenario3
-from tree_baselines import QRF
+from simulation.scenarios import Scenario1, Scenario2, Scenario3
+from simulation.tree_baselines import QRF
 
 METHODS = ("qrf", "huber")
 SCENARIOS = {1: Scenario1, 2: Scenario2, 3: Scenario3}

@@ -28,7 +28,7 @@ fi
 
 mkdir -p "$PROJECT_DIR/outputs/logs" "$PROJECT_DIR/outputs/additional_baselines"
 cd "$PROJECT_DIR/python"
-"$PYTHON_BIN" -u additional_baselines_benchmark.py \
+"$PYTHON_BIN" -u -m simulation.additional_baselines \
   --scenario "$SCENARIO" \
   --shape "$SHAPE" \
   --trials "${TRIALS:-50}" \
